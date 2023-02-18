@@ -355,6 +355,7 @@ import wagameLensPostInteraction from "./wagame-lens-post-interaction";
 import walletGroup from "./wallet-group";
 import wansu from "./wansu";
 import web3Developer from "./web3-developer";
+import web3Social from "./web3-social";
 import weedLoverBecomeFollower from "./weed-lover-become-follower";
 import whitesocks from "./whitesocks";
 import withLoveFromBykur from "./with-love-from-bykur";
@@ -736,6 +737,7 @@ export const groupGenerators: GroupGeneratorsLibrary = {
   "wallet-group": walletGroup,
   "wansu": wansu,
   "web3-developer": web3Developer,
+  "web3-social": web3Social,
   "weed-lover-become-follower": weedLoverBecomeFollower,
   "whitesocks": whitesocks,
   "with-love-from-bykur": withLoveFromBykur,
