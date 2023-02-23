@@ -11,6 +11,11 @@ const group = {
   description: "Group",
   type: "object",
   properties: {
+    id: {
+      type: "string",
+      description: "Group id (uint128)",
+      example: "0x826cd6fa6e8b22299e794a530250852f",
+    },
     name: {
       type: "string",
       description: "Badge name",
@@ -20,6 +25,16 @@ const group = {
       type: "number",
       description: "Group generation timestamp",
       example: "1660065741",
+    },
+    description: {
+      type: "string",
+      description: "Group eligibility description",
+      example: "Example group description",
+    },
+    specs: {
+      type: "string",
+      description: "Highly detailed group eligibility specs",
+      example: "Example group specs",
     },
     generatedBy: {
       type: "string",

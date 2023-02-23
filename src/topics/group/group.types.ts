@@ -2,17 +2,18 @@ import { BigNumberish } from "ethers";
 
 export type Properties = {
   accountsNumber: number;
-  tierDistribution: { [tier: number]: number };
+  valueDistribution: { [tier: number]: number };
 };
 
 export type GroupMetadata = {
   name: string;
   timestamp: number;
+  description: string;
+  specs: string;
   generatedBy?: string;
   valueType: ValueType;
   accountSources?: AccountSource[];
   tags: Tags[];
-  properties?: Properties;
 };
 
 export type GroupWithData = GroupMetadata & {
@@ -25,6 +26,7 @@ export type ResolvedGroupWithData = GroupMetadata & {
 };
 
 export type Group = GroupMetadata & {
+  id: string;
   data: () => Promise<FetchedData>;
   resolvedIdentifierData: () => Promise<FetchedData>;
 };

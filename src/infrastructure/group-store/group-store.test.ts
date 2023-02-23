@@ -1,5 +1,7 @@
+import { BigNumber } from "ethers/lib/ethers";
+import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
 import { LocalGroupStore, MemoryGroupStore } from ".";
-import { GroupStore } from "topics/group";
+import { AccountSource, GroupStore } from "topics/group";
 import {
   testGroups,
   exampleData,
@@ -27,32 +29,34 @@ describe("test groups stores", () => {
     async (groupStore) => {
       await groupStore.save(testGroups.group1_0);
       const groups = await groupStore.all();
-      expect(groups).toHaveLength(1);
-      expect(groups[0]).toBeSameGroup(testGroups.group1_0);
+      expect(Object.keys(groups)).toHaveLength(1);
+      expect(Object.values(groups)[0]).toBeSameGroup(testGroups.group1_0);
     }
   );
 
   it.each(testCases)(
-    "Should generate multiple groups and retrieve them from store",
+    "should store group with correct ids",
     async (groupStore) => {
-      await groupStore.save(testGroups.group1_0);
-      await groupStore.save(testGroups.group1_1);
-      const groups = await groupStore.all();
-      expect(groups).toHaveLength(2);
-      expect(groups).toContainGroup(testGroups.group1_0);
-      expect(groups).toContainGroup(testGroups.group1_1);
+      const savedGroup = await groupStore.save(testGroups.group1_0);
+      const UINT128_MAX = BigNumber.from(2).pow(128).sub(1);
+      const nameHash = keccak256(toUtf8Bytes(savedGroup.name));
+      const savedId = BigNumber.from(nameHash).mod(UINT128_MAX).toHexString();
+      expect(savedGroup.id).toBe(savedId);
+
+      const savedGroup2 = await groupStore.save(testGroups.group1_0);
+
+      expect(savedGroup2.id).toBe(BigNumber.from(savedId).add(1).toHexString());
     }
   );
 
-  it.each(testCases)(
-    "Should generate multiple groups and retrieve latest",
-    async (groupStore) => {
-      await groupStore.save(testGroups.group1_1);
-      await groupStore.save(testGroups.group1_0);
-      const latest = await groupStore.latest(testGroups.group1_0.name);
-      expect(latest).toBeSameGroup(testGroups.group1_1);
-    }
-  );
+  it.each(testCases)("should delete group", async (groupStore) => {
+    const savedGroup = await groupStore.save(testGroups.group1_0);
+    const groups = await groupStore.all();
+    expect(Object.keys(groups)).toHaveLength(1);
+    await groupStore.delete(savedGroup);
+    const groupsAfterDelete = await groupStore.all();
+    expect(Object.keys(groupsAfterDelete)).toHaveLength(0);
+  });
 
   it.each(testCases)(
     "Should generate multiple groups and search by name",
@@ -65,8 +69,7 @@ describe("test groups stores", () => {
         groupName: testGroups.group1_0.name,
       });
 
-      expect(groups).toHaveLength(2);
-      expect(groups).toContainGroup(testGroups.group1_0);
+      expect(groups).toHaveLength(1);
       expect(groups).toContainGroup(testGroups.group1_1);
     }
   );
@@ -89,6 +92,21 @@ describe("test groups stores", () => {
         latest: true,
       });
       expect(latest2[0]).toBeSameGroup(testGroups.group2_0);
+    }
+  );
+
+  it.each(testCases)(
+    "Should generate multiple groups and search by name and timestamp",
+    async (groupStore) => {
+      await groupStore.save(testGroups.group1_0);
+      await groupStore.save(testGroups.group1_1);
+      await groupStore.save(testGroups.group2_0);
+
+      const latest1 = await groupStore.search({
+        groupName: testGroups.group1_0.name,
+        timestamp: testGroups.group1_1.timestamp,
+      });
+      expect(latest1[0]).toBeSameGroup(testGroups.group1_1);
     }
   );
 
@@ -118,7 +136,7 @@ describe("test groups stores", () => {
       await groupStore.save(testGroups.group1_1);
       await groupStore.save(testGroups.group2_0);
 
-      const latests = await groupStore.latests();
+      const latests = await groupStore.all();
       expect(Object.keys(latests)).toHaveLength(2);
       expect(latests[testGroups.group1_0.name]).toBeSameGroup(
         testGroups.group1_1
@@ -130,20 +148,51 @@ describe("test groups stores", () => {
   );
 
   it.each(testCases)(
-    "Should throw error when retrieving latest from empty store",
+    "Should generate a group and retrieve data from store",
     async (groupStore) => {
-      await expect(async () => {
-        await groupStore.latest(testGroups.group1_0.name);
-      }).rejects.toThrow();
+      await groupStore.save(testGroups.group1_0);
+      const group = await groupStore.all();
+      expect(await group[testGroups.group1_0.name].data()).toEqual(exampleData);
     }
   );
 
   it.each(testCases)(
-    "Should generate a group and retrieve data from store",
+    "Should throw when trying to retrieve latest with empty store",
+    async (groupStore) => {
+      expect(async () => {
+        await groupStore.latest("test");
+      }).rejects.toThrowError('"test" group not yet generated');
+    }
+  );
+
+  it.each(testCases)(
+    "Should update a group without changing the id",
     async (groupStore) => {
       await groupStore.save(testGroups.group1_0);
-      const group = await groupStore.latest(testGroups.group1_0.name);
-      expect(await group.data()).toEqual(exampleData);
+      const groups = await groupStore.all();
+      const group = groups[testGroups.group1_0.name];
+
+      await groupStore.update({
+        ...group,
+        data: await group.data(),
+        resolvedIdentifierData: await group.resolvedIdentifierData(),
+        accountSources: [AccountSource.TEST],
+      });
+
+      if (groupStore instanceof LocalGroupStore) {
+        expect(
+          (
+            await groupStore.localFileStore.read(
+              `${group.name}/${group.timestamp}.json`
+            )
+          ).data
+        ).toBeUndefined();
+      }
+
+      const updatedGroups = await groupStore.all();
+      const updatedGroup = updatedGroups[testGroups.group1_0.name];
+      expect(updatedGroup.id).toEqual(group.id);
+      expect(updatedGroup.accountSources).not.toEqual(group.accountSources);
     }
   );
 
@@ -151,10 +200,10 @@ describe("test groups stores", () => {
     "Should generate a group and retrieve resolvedIdentifierData from store",
     async (groupStore) => {
       await groupStore.save(testGroups.group1_0);
-      const group = await groupStore.latest(testGroups.group1_0.name);
-      expect(await group.resolvedIdentifierData()).toEqual(
-        exampleResolvedIdentifierData
-      );
+      const group = await groupStore.all();
+      expect(
+        await group[testGroups.group1_0.name].resolvedIdentifierData()
+      ).toEqual(exampleResolvedIdentifierData);
     }
   );
 

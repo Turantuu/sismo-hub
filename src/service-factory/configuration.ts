@@ -22,11 +22,13 @@ import {
   LocalGroupGeneratorStore,
   MemoryGroupGeneratorStore,
 } from "infrastructure/group-generator-store";
+import { MemoryGroupSnapshotStore } from "infrastructure/group-snapshot/group-snapshot-memory";
+import { LocalGroupSnapshotStore } from "infrastructure/group-snapshot/local-group-snapshot-store";
 import { LocalGroupStore, MemoryGroupStore } from "infrastructure/group-store";
 import { MemoryLogger } from "infrastructure/logger/memory-logger";
 import { StdoutLogger } from "infrastructure/logger/stdout-logger";
 import { LoggerService } from "logger/logger";
-import { AttestersLibrary, Network } from "topics/attester";
+import { RegistryTreesConfigurationsLibrary, Network } from "topics/attester";
 import { testAttesters } from "topics/attester/test-attester";
 import { AvailableDataStore } from "topics/available-data";
 import { BadgesCollection } from "topics/badge";
@@ -41,10 +43,11 @@ import {
   GroupGeneratorStore,
 } from "topics/group-generator";
 import { groupGenerators as testGroupGenerators } from "topics/group-generator/test-group-generator";
+import { GroupSnapshotStore } from "topics/group-snapshot";
 import { GlobalResolver } from "topics/resolver/global-resolver";
 
 export type CommonConfiguration = {
-  attesters: AttestersLibrary;
+  attesters: RegistryTreesConfigurationsLibrary;
   envNetworks: Network[];
   availableDataStore: AvailableDataStore;
   availableGroupStore: FileStoreApi;
@@ -52,6 +55,7 @@ export type CommonConfiguration = {
   dataProviders: DataProviders;
   flows: Flow[];
   groupStore: GroupStore;
+  groupSnapshotStore: GroupSnapshotStore;
   groupGenerators: GroupGeneratorsLibrary;
   groupGeneratorStore: GroupGeneratorStore;
   globalResolver: GlobalResolver;
@@ -90,6 +94,7 @@ const defaultConfigurations: {
     availableDataStore: new LocalAvailableDataStore(),
     availableGroupStore: new LocalFileStore("available-groups"),
     groupStore: new MemoryGroupStore(),
+    groupSnapshotStore: new MemoryGroupSnapshotStore(),
     logger: new StdoutLogger(),
     globalResolver: new GlobalResolver(),
   },
@@ -104,6 +109,7 @@ const defaultConfigurations: {
     availableDataStore: new LocalAvailableDataStore(),
     availableGroupStore: new LocalFileStore("available-groups"),
     groupStore: new MemoryGroupStore(),
+    groupSnapshotStore: new MemoryGroupSnapshotStore(),
     logger: new StdoutLogger(),
     globalResolver: new GlobalResolver(),
   },
@@ -118,6 +124,7 @@ const defaultConfigurations: {
     availableDataStore: new LocalAvailableDataStore(),
     availableGroupStore: new LocalFileStore("available-groups"),
     groupStore: new MemoryGroupStore(),
+    groupSnapshotStore: new MemoryGroupSnapshotStore(),
     logger: new StdoutLogger(),
     globalResolver: new GlobalResolver(),
   },
@@ -132,6 +139,7 @@ const defaultConfigurations: {
     availableDataStore: new LocalAvailableDataStore(),
     availableGroupStore: new LocalFileStore("available-groups"),
     groupStore: new MemoryGroupStore(),
+    groupSnapshotStore: new MemoryGroupSnapshotStore(),
     logger: new StdoutLogger(),
     globalResolver: new GlobalResolver(),
   },
@@ -146,6 +154,7 @@ const defaultConfigurations: {
     availableDataStore: new LocalAvailableDataStore(),
     availableGroupStore: new LocalFileStore("available-groups"),
     groupStore: new MemoryGroupStore(),
+    groupSnapshotStore: new MemoryGroupSnapshotStore(),
     logger: new StdoutLogger(),
     globalResolver: new GlobalResolver(),
   },
@@ -160,6 +169,7 @@ const defaultConfigurations: {
     groupGenerators: groupGenerators,
     groupGeneratorStore: new LocalGroupGeneratorStore(),
     groupStore: new LocalGroupStore(),
+    groupSnapshotStore: new LocalGroupSnapshotStore(),
     globalResolver: new GlobalResolver(),
     logger: new StdoutLogger(),
   },
@@ -174,6 +184,7 @@ const defaultConfigurations: {
     groupGenerators: testGroupGenerators,
     groupGeneratorStore: new MemoryGroupGeneratorStore(),
     groupStore: new MemoryGroupStore(),
+    groupSnapshotStore: new MemoryGroupSnapshotStore(),
     globalResolver: new GlobalResolver(["^test:", "^0x[a-fA-F0-9]{40}$"]),
     logger: new MemoryLogger(),
   },

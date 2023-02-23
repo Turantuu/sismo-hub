@@ -1,5 +1,4 @@
 import { generateHydraS1Attester } from "@badges-metadata/base/hydra-s1";
-import { hydraS1GroupPropertiesEncoders } from "@badges-metadata/base/hydra-s1/hydra-s1-properties-encoder";
 import { hydraS1AccountboundBadges as hydraS1AccountboundBadgesMain } from "@badges-metadata/main/hydra-s1-accountbound";
 import { Network } from "topics/attester";
 import { BadgeMetadata, BadgesCollection } from "topics/badge";
@@ -22,16 +21,22 @@ export const hydraS1AccountboundAttester = generateHydraS1Attester(
   },
   {
     name: "hydra-s1-accountbound",
-    groupPropertiesEncoder: hydraS1GroupPropertiesEncoders.simpleEncoder,
     attestationsCollections: hydraS1AccountboundBadges.badges.map((badge: BadgeMetadata) => {
-      if (!badge.groupFetcher && !badge.groupGeneratorName) {
-        throw new Error("Either groupFetcher or groupGeneratorName should be specified !");
+      if (!badge.groupFetcher && !badge.groupSnapshot.groupName) {
+        throw new Error("Either groupFetcher or groupName should be specified !");
       }
       const groupFetcher = badge.groupFetcher
         ? badge.groupFetcher
         : async (groupStore: GroupStore) => [
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            await groupStore.latest(badge.groupGeneratorName!),
+            (
+              await groupStore.search({
+                groupName: badge.groupSnapshot.groupName,
+                ...(badge.groupSnapshot.timestamp
+                  ? { timestamp: badge.groupSnapshot.timestamp }
+                  : { latest: true }),
+              })
+            )[0],
           ];
       return {
         internalCollectionId: badge.internalCollectionId,

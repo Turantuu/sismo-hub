@@ -24,51 +24,57 @@ export const testGroups: { [name: string]: ResolvedGroupWithData } = {
   group1_0: {
     name: "test-group1",
     timestamp: timestamp,
+    description: "test-description-1",
+    specs: "test-specs-1",
     generatedBy: exampleGroupGenerator + "-1",
     data: exampleData,
     resolvedIdentifierData: exampleResolvedIdentifierData,
     accountSources: [AccountSource.ETHEREUM, AccountSource.TEST],
-    properties: { accountsNumber: 0, tierDistribution: { "1": 0 } },
     valueType: ValueType.Info,
     tags: [Tags.Vote, Tags.Mainnet],
   },
   group1_1: {
     name: "test-group1",
     timestamp: timestamp + 60,
+    description: "test-description",
+    specs: "test-specs",
     generatedBy: exampleGroupGenerator + "-1",
     data: exampleData,
     resolvedIdentifierData: exampleResolvedIdentifierData,
     accountSources: [AccountSource.TEST],
-    properties: { accountsNumber: 0, tierDistribution: { "1": 0 } },
     valueType: ValueType.Info,
     tags: [Tags.Vote, Tags.Mainnet],
   },
   group2_0: {
     name: "test-group2",
     timestamp: timestamp + 120,
+    description: "test-description-2",
+    specs: "test-specs-2",
     generatedBy: exampleGroupGenerator + "-2",
     data: exampleData,
     resolvedIdentifierData: exampleResolvedIdentifierData,
     accountSources: [AccountSource.ETHEREUM, AccountSource.TEST],
-    properties: { accountsNumber: 0, tierDistribution: { "1": 0 } },
     valueType: ValueType.Info,
     tags: [Tags.Vote, Tags.Mainnet],
   },
   group3_0: {
     name: "non-valid-account-source-group",
     timestamp: timestamp + 160,
+    description: "test-description",
+    specs: "test-specs",
     generatedBy: exampleGroupGenerator + "-3",
     data: exampleData,
     resolvedIdentifierData: exampleResolvedIdentifierData,
     // AccountSource.DEV has no resolver implemented
     accountSources: [AccountSource.DEV],
-    properties: { accountsNumber: 0, tierDistribution: { "1": 0 } },
     valueType: ValueType.Info,
     tags: [Tags.Vote, Tags.Mainnet],
   },
   group4_0: {
     name: "non-valid-group-properties-missing",
     timestamp: timestamp + 160,
+    description: "test-description",
+    specs: "test-specs",
     generatedBy: exampleGroupGenerator + "-4",
     data: { ...exampleData, "fake:testing": "2" },
     resolvedIdentifierData: exampleResolvedIdentifierData,
@@ -80,10 +86,11 @@ export const testGroups: { [name: string]: ResolvedGroupWithData } = {
   group5_0: {
     name: "non-valid-group-generator-missing",
     timestamp: timestamp + 160,
+    description: "test-description",
+    specs: "test-specs",
     // missing group generator
     data: { ...exampleData, "fake:testing": "2" },
     resolvedIdentifierData: exampleResolvedIdentifierData,
-    properties: { accountsNumber: 0, tierDistribution: { "1": 0 } },
     accountSources: [AccountSource.DEV],
     valueType: ValueType.Info,
     tags: [Tags.Vote, Tags.Mainnet],
@@ -91,10 +98,11 @@ export const testGroups: { [name: string]: ResolvedGroupWithData } = {
   group6_0: {
     name: "non-valid-group-generator-missing",
     timestamp: timestamp + 160,
+    description: "test-description",
+    specs: "test-specs",
     generatedBy: exampleGroupGenerator + "-6",
     data: { ...exampleData, "fake:testing": "2" },
     resolvedIdentifierData: exampleResolvedIdentifierData,
-    properties: { accountsNumber: 0, tierDistribution: { "1": 0 } },
     // missing account sources
     valueType: ValueType.Info,
     tags: [Tags.Vote, Tags.Mainnet],
@@ -103,8 +111,11 @@ export const testGroups: { [name: string]: ResolvedGroupWithData } = {
 
 /* istanbul ignore next */
 export const testGroup: Group = {
+  id: "1",
   name: "test-group",
   timestamp: 1,
+  description: "test-description",
+  specs: "test-specs",
   data: async () => ({
     "0x1": 1,
     "0x2": 1,
@@ -112,7 +123,6 @@ export const testGroup: Group = {
   resolvedIdentifierData: async (data = { "0x1": 1, "0x2": 1 }) => {
     return data;
   },
-  properties: { accountsNumber: 0, tierDistribution: { "1": 0 } },
   accountSources: [AccountSource.ETHEREUM],
   tags: [],
   valueType: ValueType.Info,

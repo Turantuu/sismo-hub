@@ -17,18 +17,19 @@ export class LocalGroupStore extends GroupStore {
     this.dataFileStore = new LocalFileStore("groups-data", diskPath);
   }
 
-  async all(): Promise<Group[]> {
-    const groups: Group[] = [];
+  async all(): Promise<{ [name: string]: Group }> {
+    const groups: { [name: string]: Group } = {};
     for (const groupName of await this.localFileStore.list("./")) {
       for (const filename of await this.localFileStore.list(groupName)) {
-        groups.push(await this.load(`${groupName}/${filename}`));
+        groups[groupName] = await this.load(`${groupName}/${filename}`);
       }
     }
     return groups;
   }
 
   async load(filename: string): Promise<Group> {
-    const group: GroupMetadata = await this.localFileStore.read(filename);
+    const group: GroupMetadata & { id: string } =
+      await this.localFileStore.read(filename);
     return {
       ...group,
       data: () => this.dataFileStore.read(this.filename(group)),
@@ -37,13 +38,49 @@ export class LocalGroupStore extends GroupStore {
     };
   }
 
-  async save(group: ResolvedGroupWithData): Promise<void> {
-    await this.localFileStore.write(this.filename(group), groupMetadata(group));
+  async save(group: ResolvedGroupWithData): Promise<Group> {
+    await this.localFileStore.write(this.filename(group), {
+      ...groupMetadata(group),
+      id: await this.getNewId(group.name),
+    });
     await this.dataFileStore.write(this.filename(group), group.data);
     await this.dataFileStore.write(
       this.resolvedFilename(group),
       group.resolvedIdentifierData
     );
+
+    return this.load(this.filename(group));
+  }
+
+  public async update(
+    group: ResolvedGroupWithData & { id: string }
+  ): Promise<Group> {
+    await this.localFileStore.write(this.filename(group), {
+      ...groupMetadata(group),
+      id: group.id,
+    });
+    await this.dataFileStore.write(this.filename(group), group.data);
+    await this.dataFileStore.write(
+      this.resolvedFilename(group),
+      group.resolvedIdentifierData
+    );
+    return this.load(this.filename(group));
+  }
+
+  public async updateMetadata(
+    group: GroupMetadata & { id: string }
+  ): Promise<Group> {
+    await this.localFileStore.write(this.filename(group), {
+      ...group,
+      id: group.id,
+    });
+    return this.load(this.filename(group));
+  }
+
+  async delete(group: Group): Promise<void> {
+    await this.localFileStore.delete(this.filename(group));
+    await this.dataFileStore.delete(this.filename(group));
+    await this.dataFileStore.delete(this.resolvedFilename(group));
   }
 
   async reset(): Promise<void> {

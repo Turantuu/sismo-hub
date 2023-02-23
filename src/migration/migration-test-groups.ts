@@ -30,29 +30,32 @@ export const testGroupsMigration: { [name: string]: GroupMetadata } = {
   group1_0: {
     name: "test-group1",
     timestamp: 1657955315,
+    description: "test-description",
+    specs: "test-specs",
     generatedBy: "fake-group-generator",
     accountSources: [AccountSource.ETHEREUM, AccountSource.GITHUB],
     valueType: ValueType.Info,
     tags: [Tags.Vote, Tags.Mainnet],
-    properties: { accountsNumber: 0, tierDistribution: { "1": 0 } },
   },
   group1_1: {
     name: "test-group1",
     timestamp: 1657955315 + 60,
+    description: "test-description",
+    specs: "test-specs",
     generatedBy: "fake-group-generator",
     accountSources: [AccountSource.ETHEREUM],
     valueType: ValueType.Info,
     tags: [Tags.Vote, Tags.Mainnet],
-    properties: { accountsNumber: 0, tierDistribution: { "1": 0 } },
   },
   group2_0: {
     name: "test-group2",
     timestamp: 1657955315 + 90,
+    description: "test-description",
+    specs: "test-specs",
     generatedBy: "fake-group-generator",
     accountSources: [AccountSource.GITHUB],
     valueType: ValueType.Info,
     tags: [Tags.Vote, Tags.Mainnet],
-    properties: { accountsNumber: 0, tierDistribution: { "1": 0 } },
   },
 };
 
@@ -63,27 +66,15 @@ export const testGroupsMigrationWithData: {
     ...testGroupsMigration.group1_0,
     data: dataMigration.group1_0,
     resolvedIdentifierData: dataMigration.group1_0,
-    properties: {
-      accountsNumber: 3,
-      tierDistribution: { "1": 1, "3": 1, "15": 1 },
-    },
   },
   group1_1: {
     ...testGroupsMigration.group1_1,
     data: dataMigration.group1_1,
     resolvedIdentifierData: dataMigration.group1_1,
-    properties: {
-      accountsNumber: 3,
-      tierDistribution: { "1": 3, "15": 1 },
-    },
   },
   group2_0: {
     ...testGroupsMigration.group2_0,
     data: dataMigration.group2_0,
     resolvedIdentifierData: dataMigration.group2_0,
-    properties: {
-      accountsNumber: 3,
-      tierDistribution: { "15": 3 },
-    },
   },
 };

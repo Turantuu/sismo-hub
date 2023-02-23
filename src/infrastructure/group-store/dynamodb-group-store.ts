@@ -1,19 +1,17 @@
 import { QUERY_ORDER } from "@typedorm/common";
 import { EntityManager } from "@typedorm/core";
 import { FileStore } from "file-store";
-import {
-  GroupModel,
-  GroupModelLatest,
-} from "infrastructure/group-store/groups.entity";
+import { GroupV2Model } from "infrastructure/group-store/groups-v2.entity";
 import {
   Group,
   GroupStore,
   groupMetadata,
   GroupSearch,
   ResolvedGroupWithData,
+  GroupMetadata,
 } from "topics/group";
 
-export class DyanmoDBGroupStore extends GroupStore {
+export class DynamoDBGroupStore extends GroupStore {
   entityManager: EntityManager;
   dataFileStore: FileStore;
 
@@ -23,18 +21,24 @@ export class DyanmoDBGroupStore extends GroupStore {
     this.dataFileStore = dataFileStore;
   }
 
-  public async latests(): Promise<{ [name: string]: Group }> {
+  public async all(): Promise<{ [name: string]: Group }> {
     const latestsGroupsItems = await this.entityManager.find(
-      GroupModelLatest,
+      GroupV2Model,
       {},
       {
-        queryIndex: "GSI1",
+        queryIndex: "GSI2",
       }
     );
+
     const latests: { [name: string]: Group } = {};
     for (const groupModel of latestsGroupsItems.items) {
       const group = this._fromGroupModelToGroup(groupModel);
-      latests[group.name] = group;
+      if (
+        !latests[group.name] ||
+        latests[group.name].timestamp < group.timestamp
+      ) {
+        latests[group.name] = group;
+      }
     }
     return latests;
   }
@@ -50,15 +54,20 @@ export class DyanmoDBGroupStore extends GroupStore {
       );
     }
     const groupsItem = latest
-      ? await this.entityManager.find(GroupModelLatest, {
-          name: groupName,
-        })
+      ? await this.entityManager.find(
+          GroupV2Model,
+          {
+            name: groupName,
+          },
+          { queryIndex: "GSI1" }
+        )
       : await this.entityManager.find(
-          GroupModel,
+          GroupV2Model,
           {
             name: groupName,
           },
           {
+            queryIndex: "GSI1",
             orderBy: QUERY_ORDER.DESC,
             ...(timestamp
               ? {
@@ -69,26 +78,71 @@ export class DyanmoDBGroupStore extends GroupStore {
               : {}),
           }
         );
+    const groups = groupsItem.items
+      .map((group) => this._fromGroupModelToGroup(group))
+      .sort((a, b) => b.timestamp - a.timestamp);
 
-    const groups = groupsItem.items.map((group) =>
-      this._fromGroupModelToGroup(group)
-    );
     return groups;
   }
 
-  public async save(group: ResolvedGroupWithData): Promise<void> {
-    const groupMain = GroupModel.fromGroupMetadata(groupMetadata(group));
+  public async save(group: ResolvedGroupWithData): Promise<Group> {
+    const id = await this.getNewId(group.name);
+    const groupMetadataAndId = { ...groupMetadata(group), id };
+    const groupMain = GroupV2Model.fromGroupMetadataAndId(groupMetadataAndId);
     await this.dataFileStore.write(this.filename(group), group.data);
     await this.dataFileStore.write(
       this.resolvedFilename(group),
       group.resolvedIdentifierData
     );
-    await this.entityManager.create(groupMain);
-    const groupLatest = GroupModelLatest.fromGroupMetadata(
-      groupMetadata(group)
+    const savedGroup: GroupV2Model = await this.entityManager.create(
+      groupMain,
+      {
+        overwriteIfExists: true,
+      }
     );
-    await this.entityManager.create(groupLatest, {
-      overwriteIfExists: true,
+
+    return this._fromGroupModelToGroup(savedGroup);
+  }
+
+  public async update(
+    group: ResolvedGroupWithData & { id: string }
+  ): Promise<Group> {
+    const groupMetadataAndId = { ...groupMetadata(group), id: group.id };
+    await this.dataFileStore.write(this.filename(group), group.data);
+    await this.dataFileStore.write(
+      this.resolvedFilename(group),
+      group.resolvedIdentifierData
+    );
+    const groupMain = GroupV2Model.fromGroupMetadataAndId(groupMetadataAndId);
+    const updatedGroup: GroupV2Model = await this.entityManager.create(
+      groupMain,
+      {
+        overwriteIfExists: true,
+      }
+    );
+    return this._fromGroupModelToGroup(updatedGroup);
+  }
+
+  public async updateMetadata(
+    group: GroupMetadata & { id: string }
+  ): Promise<Group> {
+    const groupMetadataAndId = { ...group, id: group.id };
+    const groupMain = GroupV2Model.fromGroupMetadataAndId(groupMetadataAndId);
+    const updatedGroup: GroupV2Model = await this.entityManager.create(
+      groupMain,
+      {
+        overwriteIfExists: true,
+      }
+    );
+    return this._fromGroupModelToGroup(updatedGroup);
+  }
+
+  public async delete(group: Group): Promise<void> {
+    await this.dataFileStore.delete(this.filename(group));
+    await this.dataFileStore.delete(this.resolvedFilename(group));
+    await this.entityManager.delete(GroupV2Model, {
+      id: group.id,
+      timestamp: group.timestamp,
     });
   }
 
@@ -97,23 +151,22 @@ export class DyanmoDBGroupStore extends GroupStore {
     throw new Error("Not implemented in dynamodb store");
   }
 
-  /* istanbul ignore next */
-  public async all(): Promise<Group[]> {
-    throw new Error("Not implemented in dynamodb store");
-  }
-
-  private _fromGroupModelToGroup(group: GroupModel) {
-    const groupMetadata = group.toGroupMetadata();
+  private _fromGroupModelToGroup(group: GroupV2Model) {
+    const groupMetadataWithId = group.toGroupMetadataWithId();
     return {
-      ...groupMetadata,
-      data: () => this.dataFileStore.read(this.filename(groupMetadata)),
+      ...groupMetadataWithId,
+      data: () => this.dataFileStore.read(this.filename(groupMetadataWithId)),
       resolvedIdentifierData: async () => {
         if (
-          await this.dataFileStore.exists(this.resolvedFilename(groupMetadata))
+          await this.dataFileStore.exists(
+            this.resolvedFilename(groupMetadataWithId)
+          )
         ) {
-          return this.dataFileStore.read(this.resolvedFilename(groupMetadata));
+          return this.dataFileStore.read(
+            this.resolvedFilename(groupMetadataWithId)
+          );
         }
-        return this.dataFileStore.read(this.filename(groupMetadata));
+        return this.dataFileStore.read(this.filename(groupMetadataWithId));
       },
     };
   }
